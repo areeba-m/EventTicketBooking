@@ -1,0 +1,2 @@
+class InvalidObjectIdError(ValueError):
+    pass

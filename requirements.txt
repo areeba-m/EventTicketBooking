@@ -1,0 +1,11 @@
+FastAPI>=0.115
+Uvicorn>=0.29
+PyMongo>=4.6
+Pydantic>=2.7
+pydantic-settings>=2.4
+PyJWT>=2.9
+bcrypt>=4.1
+email-validator
+pytest>=7.4
+pytest-asyncio>=0.21
+httpx
