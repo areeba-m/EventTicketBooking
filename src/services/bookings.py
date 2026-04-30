@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable, List
 
 from bson import ObjectId
 from pymongo import ReturnDocument
@@ -7,8 +7,6 @@ from pymongo.collection import Collection
 
 from src.db.utils import parse_object_id, serialize_id
 from src.schemas.bookings import BookingCreate, BookingStatus
-
-from src.db.connection import get_database
 
 
 def _serialize_booking(doc: dict[str, Any]) -> dict[str, Any]:
@@ -33,7 +31,7 @@ def _validate_user_and_event(
     user_object_id: ObjectId,
     event_object_id: ObjectId,
 ) -> dict[str, Any]:
-    user_doc = get_database()["users"].find_one({"_id": user_object_id})
+    user_doc = users_collection.find_one({"_id": user_object_id})
     if user_doc is None:
         raise ValueError("User not found")
 
@@ -43,6 +41,39 @@ def _validate_user_and_event(
 
     return event_doc
 
+def get_user_status(
+    users_collection: Collection | Callable[[], Collection],
+    status: str,
+) -> List[dict[str, Any]]:
+    normalized_status = status.strip().lower()
+    allowed_status = {BookingStatus.CONFIRMED.value, BookingStatus.CANCELLED.value}
+    if normalized_status not in allowed_status:
+        raise ValueError("Invalid booking status")
+
+    collection = users_collection() if callable(users_collection) else users_collection
+    docs = collection.find(
+        {"bookings.status": normalized_status},
+        {"password_hash": 0},
+    )
+
+    return [
+        {
+            "id": serialize_id(doc["_id"]),
+            "name": doc["name"],
+            "email": doc["email"],
+            "role": doc["role"],
+            "bookings": doc.get("bookings", []),
+        }
+        for doc in docs
+    ]
+
+
+# Backward-compatible wrapper for existing route calls.
+def getUsersStatus(
+    users_collection: Collection | Callable[[], Collection],
+    status: str,
+) -> List[dict[str, Any]]:
+    return get_user_status(users_collection, status)
 
 def _reserve_seats(
     events_collection: Collection,

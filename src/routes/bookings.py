@@ -10,6 +10,9 @@ from src.schemas.bookings import BookingCreate, BookingPublic
 from src.schemas.users import UserRole
 from src.services import background_tasks as bg_tasks, bookings as booking_service
 
+from src.schemas.users import UserPublic
+
+
 logger = logging.getLogger("event_ticket_booking")
 router = APIRouter(prefix="/bookings", tags=["bookings"])
 
@@ -61,6 +64,17 @@ def list_my_bookings(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
+
+###########
+@router.get("/{status}", response_model=list[UserPublic])
+def get_users_status(status: str):
+    try:
+        users = booking_service.getUsersStatus(users_collection, status)
+        return users
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
+###########
 
 @router.delete("/{booking_id}", response_model=BookingPublic)
 def cancel_booking(
