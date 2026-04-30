@@ -4,7 +4,11 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from pymongo.collection import Collection
 
-from src.db.collections import bookings_collection, events_collection, users_collection
+from src.db.collections import (
+    analytics_bookings_collection,
+    analytics_events_collection,
+    analytics_users_collection,
+)
 from src.dependencies.auth import require_role
 from src.schemas.analytics import EventBookingAnalytics, RevenueAnalytics, UserBookingAnalytics
 from src.schemas.users import UserRole
@@ -19,8 +23,8 @@ router = APIRouter(
 
 @router.get("/events", response_model=list[EventBookingAnalytics])
 def event_analytics(
-    bookings: Annotated[Collection, Depends(bookings_collection)],
-    events: Annotated[Collection, Depends(events_collection)],
+    bookings: Annotated[Collection, Depends(analytics_bookings_collection)],
+    events: Annotated[Collection, Depends(analytics_events_collection)],
     start_date: datetime | None = Query(default=None),
     end_date: datetime | None = Query(default=None),
     venue: str | None = Query(default=None, min_length=1, max_length=200),
@@ -40,8 +44,8 @@ def event_analytics(
 
 @router.get("/users", response_model=list[UserBookingAnalytics])
 def user_analytics(
-    bookings: Annotated[Collection, Depends(bookings_collection)],
-    users: Annotated[Collection, Depends(users_collection)],
+    bookings: Annotated[Collection, Depends(analytics_bookings_collection)],
+    users: Annotated[Collection, Depends(analytics_users_collection)],
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
 ) -> list[dict]:
@@ -50,7 +54,7 @@ def user_analytics(
 
 @router.get("/revenue", response_model=RevenueAnalytics)
 def revenue_analytics(
-    bookings: Annotated[Collection, Depends(bookings_collection)],
+    bookings: Annotated[Collection, Depends(analytics_bookings_collection)],
     start_date: datetime | None = Query(default=None),
     end_date: datetime | None = Query(default=None),
 ) -> dict:
