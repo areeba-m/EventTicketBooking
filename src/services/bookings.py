@@ -8,6 +8,8 @@ from pymongo.collection import Collection
 from src.db.utils import parse_object_id, serialize_id
 from src.schemas.bookings import BookingCreate, BookingStatus
 
+from src.db.connection import get_database
+
 
 def _serialize_booking(doc: dict[str, Any]) -> dict[str, Any]:
     return {
@@ -31,7 +33,7 @@ def _validate_user_and_event(
     user_object_id: ObjectId,
     event_object_id: ObjectId,
 ) -> dict[str, Any]:
-    user_doc = users_collection.find_one({"_id": user_object_id})
+    user_doc = get_database()["users"].find_one({"_id": user_object_id})
     if user_doc is None:
         raise ValueError("User not found")
 
