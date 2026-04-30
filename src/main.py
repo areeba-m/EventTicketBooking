@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from src.db.async_connection import close_mongo_connection_async, connect_to_mongo_async
 from src.db.connection import close_mongo_connection, connect_to_mongo
 from src.db.indexes import ensure_indexes
 from src.exceptions import InvalidObjectIdError
@@ -17,10 +18,12 @@ logger = logging.getLogger("event_ticket_booking")
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     connect_to_mongo()
+    await connect_to_mongo_async()
     ensure_indexes()
     try:
         yield
     finally:
+        await close_mongo_connection_async()
         close_mongo_connection()
 
 

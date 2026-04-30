@@ -2,7 +2,7 @@ from enum import StrEnum
 
 from pydantic import BaseModel, EmailStr, Field
 
-from src.schemas.bookings import BookingSummary
+from src.schemas.bookings import BookingStatus, BookingSummary
 
 
 class UserRole(StrEnum):
@@ -33,3 +33,10 @@ class UserPublic(BaseModel):
     email: EmailStr
     role: UserRole
     bookings: list[BookingSummary] = Field(default_factory=list)
+
+
+class UserBookingStatusPublic(BaseModel):
+    id: str
+    name: str
+    email: EmailStr
+    status: BookingStatus

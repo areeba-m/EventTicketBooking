@@ -2,17 +2,10 @@ from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
-from pymongo.collection import Collection
-
-from src.db.collections import (
-    analytics_bookings_collection,
-    analytics_events_collection,
-    analytics_users_collection,
-)
 from src.dependencies.auth import require_role
 from src.schemas.analytics import EventBookingAnalytics, RevenueAnalytics, UserBookingAnalytics
 from src.schemas.users import UserRole
-from src.services import analytics as analytics_service
+from src.services.analytics import AnalyticsService, get_analytics_service
 
 router = APIRouter(
     prefix="/analytics",
@@ -22,18 +15,15 @@ router = APIRouter(
 
 
 @router.get("/events", response_model=list[EventBookingAnalytics])
-def event_analytics(
-    bookings: Annotated[Collection, Depends(analytics_bookings_collection)],
-    events: Annotated[Collection, Depends(analytics_events_collection)],
+async def event_analytics(
+    service: Annotated[AnalyticsService, Depends(get_analytics_service)],
     start_date: datetime | None = Query(default=None),
     end_date: datetime | None = Query(default=None),
     venue: str | None = Query(default=None, min_length=1, max_length=200),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
 ) -> list[dict]:
-    return analytics_service.event_booking_analytics(
-        bookings,
-        events,
+    return await service.event_booking_analytics(
         start_date=start_date,
         end_date=end_date,
         venue=venue,
@@ -43,23 +33,21 @@ def event_analytics(
 
 
 @router.get("/users", response_model=list[UserBookingAnalytics])
-def user_analytics(
-    bookings: Annotated[Collection, Depends(analytics_bookings_collection)],
-    users: Annotated[Collection, Depends(analytics_users_collection)],
+async def user_analytics(
+    service: Annotated[AnalyticsService, Depends(get_analytics_service)],
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
 ) -> list[dict]:
-    return analytics_service.user_booking_analytics(bookings, users, skip=skip, limit=limit)
+    return await service.user_booking_analytics(skip=skip, limit=limit)
 
 
 @router.get("/revenue", response_model=RevenueAnalytics)
-def revenue_analytics(
-    bookings: Annotated[Collection, Depends(analytics_bookings_collection)],
+async def revenue_analytics(
+    service: Annotated[AnalyticsService, Depends(get_analytics_service)],
     start_date: datetime | None = Query(default=None),
     end_date: datetime | None = Query(default=None),
 ) -> dict:
-    return analytics_service.revenue_analytics(
-        bookings,
+    return await service.revenue_analytics(
         start_date=start_date,
         end_date=end_date,
     )

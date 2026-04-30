@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.schemas.users import TokenResponse, UserLogin, UserPublic, UserRegister
-from src.services import auth as auth_service
+from src.services.auth import AuthService, get_auth_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -12,9 +12,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
     status_code=status.HTTP_201_CREATED,
     summary="Register a new user",
 )
-def register(payload: UserRegister) -> dict:
+async def register(
+    payload: UserRegister,
+    service: AuthService = Depends(get_auth_service),
+) -> dict:
     try:
-        return auth_service.register_user(payload)
+        return await service.register_user(payload)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
 
@@ -25,9 +28,12 @@ def register(payload: UserRegister) -> dict:
     status_code=status.HTTP_200_OK,
     summary="Login and get a JWT",
 )
-def login(payload: UserLogin) -> TokenResponse:
+async def login(
+    payload: UserLogin,
+    service: AuthService = Depends(get_auth_service),
+) -> TokenResponse:
     try:
-        token = auth_service.login(payload)
+        token = await service.login(payload)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
     return TokenResponse(access_token=token)
