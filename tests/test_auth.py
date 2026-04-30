@@ -17,7 +17,7 @@ async def test_register_attendee(client: AsyncClient, mock_dependencies: dict) -
     """Test successful attendee registration."""
     users_coll = mock_dependencies["users"]
     users_coll.find_one.return_value = None
-    users_coll.insert_one.return_value = None
+    users_coll.insert_one.side_effect = lambda doc: doc.setdefault("_id", ObjectId())
 
     payload = {
         "name": "Alice Attendee",
@@ -37,7 +37,7 @@ async def test_register_organizer(client: AsyncClient, mock_dependencies: dict) 
     """Test successful organizer registration."""
     users_coll = mock_dependencies["users"]
     users_coll.find_one.return_value = None
-    users_coll.insert_one.return_value = None
+    users_coll.insert_one.side_effect = lambda doc: doc.setdefault("_id", ObjectId())
 
     payload = {
         "name": "Olivia Organizer",
@@ -54,6 +54,9 @@ async def test_register_organizer(client: AsyncClient, mock_dependencies: dict) 
 async def test_register_duplicate_email(client: AsyncClient, mock_dependencies: dict) -> None:
     """Test registration fails on duplicate email."""
     from pymongo.errors import DuplicateKeyError
+
+    users_coll = mock_dependencies["users"]
+    users_coll.insert_one.side_effect = DuplicateKeyError("duplicate key")
 
     with pytest.raises(ValueError, match="Email already registered"):
         auth_service.register_user(
@@ -90,6 +93,15 @@ async def test_login_valid_credentials(client: AsyncClient, mock_dependencies: d
 @pytest.mark.asyncio
 async def test_login_invalid_password(client: AsyncClient, mock_dependencies: dict) -> None:
     """Test login fails with wrong password."""
+    users_coll = mock_dependencies["users"]
+    hashed = hash_password("CorrectPassword")
+    users_coll.find_one.return_value = {
+        "_id": ObjectId(),
+        "email": "alice@example.com",
+        "password_hash": hashed,
+        "role": "attendee",
+    }
+
     with pytest.raises(ValueError, match="Invalid credentials"):
         auth_service.login(
             UserLogin(email="alice@example.com", password="WrongPassword")

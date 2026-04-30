@@ -1,9 +1,11 @@
 import pytest
+import pytest_asyncio
 from unittest.mock import MagicMock
 from httpx import AsyncClient, ASGITransport
 from pymongo.collection import Collection
 
 from src.main import app
+from src.db import connection as db_connection
 from src.db.collections import bookings_collection, events_collection, users_collection
 
 
@@ -85,6 +87,15 @@ def mock_dependencies(
     mock_bookings_collection: Collection,
 ) -> dict:
     """Override app dependencies with mocks."""
+    mock_db = MagicMock()
+    collection_map = {
+        "users": mock_users_collection,
+        "events": mock_events_collection,
+        "bookings": mock_bookings_collection,
+    }
+    mock_db.__getitem__.side_effect = lambda name: collection_map[name]
+    db_connection._db = mock_db
+
     app.dependency_overrides[users_collection] = lambda: mock_users_collection
     app.dependency_overrides[events_collection] = lambda: mock_events_collection
     app.dependency_overrides[bookings_collection] = lambda: mock_bookings_collection
@@ -94,9 +105,10 @@ def mock_dependencies(
         "bookings": mock_bookings_collection,
     }
     app.dependency_overrides.clear()
+    db_connection._db = None
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client(mock_dependencies: dict):
     """Create test client with mocked dependencies."""
     transport = ASGITransport(app=app)

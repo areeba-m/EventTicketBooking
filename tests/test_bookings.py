@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import MagicMock
 from httpx import AsyncClient
 from bson import ObjectId
 
@@ -182,7 +183,8 @@ async def test_list_user_bookings(
     bookings_coll = mock_dependencies["bookings"]
     user_id = ObjectId(fake_attendee_user["id"])
 
-    bookings_coll.find.return_value = [
+    cursor = MagicMock()
+    cursor.sort.return_value = [
         {
             "_id": ObjectId(),
             "user_id": user_id,
@@ -192,6 +194,7 @@ async def test_list_user_bookings(
             "created_at": "2026-04-28T12:00:00Z",
         }
     ]
+    bookings_coll.find.return_value = cursor
 
     resp = await client.get("/bookings/me")
     assert resp.status_code == 200
@@ -221,17 +224,22 @@ async def test_cancel_booking(
         "event_id": event_id,
         "seats": 2,
         "status": "confirmed",
+        "created_at": "2026-04-28T12:00:00Z",
     }
     bookings_coll.find_one_and_update.return_value = {
         "_id": ObjectId(booking_id),
+        "user_id": user_id,
+        "event_id": event_id,
+        "seats": 2,
         "status": "cancelled",
+        "created_at": "2026-04-28T12:00:00Z",
     }
 
     resp = await client.delete(f"/bookings/{booking_id}")
     assert resp.status_code == 200
     assert resp.json()["status"] == "cancelled"
     # Verify seats were incremented back
-    events_coll.update_one.assert_called_with(
+    events_coll.update_one.assert_any_call(
         {"_id": event_id},
         {"$inc": {"available_seats": 2}},
     )
@@ -273,6 +281,7 @@ async def test_cancel_already_cancelled_booking(
         "event_id": ObjectId(),
         "seats": 2,
         "status": "cancelled",
+        "created_at": "2026-04-28T12:00:00Z",
     }
 
     resp = await client.delete(f"/bookings/{booking_id}")
